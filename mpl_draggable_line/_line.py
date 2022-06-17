@@ -1,14 +1,17 @@
 from __future__ import annotations
 
+from numbers import Real
+
 import numpy as np
 from matplotlib.backend_bases import MouseEvent
 from matplotlib.cbook import CallbackRegistry
 from matplotlib.lines import Line2D
 from matplotlib.widgets import AxesWidget
-from numbers import Real
+
 __all__ = [
     "DraggableLine",
 ]
+
 
 class DraggableLine(AxesWidget):
     def __init__(self, ax, x, y, grab_range=10, useblit=False, **kwargs) -> None:
@@ -155,5 +158,3 @@ class DraggableLine(AxesWidget):
         x, y : (2,) arraylike of float
         """
         self._handles.set_data(x, y)
-
-

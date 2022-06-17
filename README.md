@@ -13,4 +13,3 @@ pip install mpl-draggable-line
 ```
 
 ![a line being dragged around in an empty plot](docs/_static/simple-demo.apng)
-
