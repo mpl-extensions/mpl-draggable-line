@@ -38,6 +38,7 @@ class DraggableLine(AxesWidget):
         center_y = (y[0] + y[1]) / 2
         self._y_lock = False
         self._x_lock = False
+        self._orientation_lock = False
 
         marker = kwargs.pop("marker", "o")
         color = kwargs.pop("color", "k")
@@ -79,6 +80,16 @@ class DraggableLine(AxesWidget):
         self._y_lock = val
 
     @property
+    def lock_orientation(self) -> bool:
+        return self._orientation_lock
+
+    @lock_orientation.setter
+    def lock_orientation(self, val: bool):
+        if not isinstance(val, bool):
+            raise TypeError("lock_orientation must be a bool")
+        self._orientation_lock = val
+
+    @property
     def grab_range(self) -> Real:
         """
         Grab range in pixels (I think in pixels)
@@ -109,6 +120,7 @@ class DraggableLine(AxesWidget):
         idx = np.argmin(dist)
         if dist[idx] < self._grab_range:
             self._handle_idx = idx
+
         else:
             self._handle_idx = None
 
@@ -119,16 +131,16 @@ class DraggableLine(AxesWidget):
             # not dragging one of out handles
             return
         x, y = self._handles.get_data()
-        if self._handle_idx == 1:
-            if not self._x_lock:
-                x += event.xdata - x[1]
-            if not self._y_lock:
-                y += event.ydata - y[1]
-        else:
-            if not self._x_lock:
+        if not self._x_lock:
+            if self._orientation_lock or self._handle_idx == 1:
+                x += event.xdata - x[self._handle_idx]
+            else:
                 x[self._handle_idx] = event.xdata
                 x[1] = (x[0] + x[2]) / 2
-            if not self._y_lock:
+        if not self._y_lock:
+            if self._orientation_lock or self._handle_idx == 1:
+                y += event.ydata - y[self._handle_idx]
+            else:
                 y[self._handle_idx] = event.ydata
                 y[1] = (y[0] + y[2]) / 2
         self._handles.set_data(x, y)
@@ -219,6 +231,7 @@ class DraggableVLine(DraggableLine):
             **kwargs,
         )
         self._y_lock = True
+        self._orientation_lock = True
 
     def on_line_changed(self, func):
         """
@@ -244,6 +257,14 @@ class DraggableVLine(DraggableLine):
     @lock_y.setter
     def lock_y(self, val: bool):
         raise ValueError("lock_y not settable on DraggableHLine")
+
+    @property
+    def lock_orientation(self) -> bool:
+        return self._orientation_lock
+
+    @lock_orientation.setter
+    def lock_orientation(self, val: bool):
+        raise ValueError("lock_orientation not settable on DraggableVLine")
 
 
 class DraggableHLine(DraggableLine):
@@ -275,6 +296,7 @@ class DraggableHLine(DraggableLine):
             **kwargs,
         )
         self._x_lock = True
+        self._orientation_lock = True
 
     def on_line_changed(self, func):
         """
@@ -300,3 +322,11 @@ class DraggableHLine(DraggableLine):
     @lock_x.setter
     def lock_x(self, val: bool):
         raise ValueError("lock_x not settable on DraggableHLine")
+
+    @property
+    def lock_orientation(self) -> bool:
+        return self._orientation_lock
+
+    @lock_orientation.setter
+    def lock_orientation(self, val: bool):
+        raise ValueError("lock_orientation not settable on DraggableHLine")
