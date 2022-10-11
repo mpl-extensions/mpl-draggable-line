@@ -3,7 +3,7 @@ try:
 except ImportError:
     __version__ = "unknown"
 
-from ._line import DraggableLine
+from ._line import DraggableHLine, DraggableLine, DraggableVLine
 
 __author__ = "Ian Hunt-Isaak"
 __email__ = "ianhuntisaak@gmail.com"
@@ -13,4 +13,6 @@ __all__ = [
     "__author__",
     "__email__",
     "DraggableLine",
+    "DraggableVLine",
+    "DraggableHLine",
 ]

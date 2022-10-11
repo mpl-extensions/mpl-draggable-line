@@ -10,6 +10,8 @@ from matplotlib.widgets import AxesWidget
 
 __all__ = [
     "DraggableLine",
+    "DraggableVLine",
+    "DraggableHLine",
 ]
 
 
@@ -34,14 +36,18 @@ class DraggableLine(AxesWidget):
         self._useblit = useblit
         center_x = (x[0] + x[1]) / 2
         center_y = (y[0] + y[1]) / 2
+        self._y_lock = False
+        self._x_lock = False
 
         marker = kwargs.pop("marker", "o")
         color = kwargs.pop("color", "k")
+        transform = kwargs.pop("transform", self.ax.transData)
         self._handles = Line2D(
             [x[0], center_x, x[1]],
             [y[0], center_y, y[1]],
             marker=marker,
             color=color,
+            transform=transform,
             **kwargs,
         )
         self.ax.add_artist(self._handles)
@@ -51,6 +57,26 @@ class DraggableLine(AxesWidget):
         self._handle_idx = None  # none implies not moving
         self._grab_range = grab_range
         self._observers = CallbackRegistry()
+
+    @property
+    def lock_x(self) -> bool:
+        return self._x_lock
+
+    @lock_x.setter
+    def lock_x(self, val: bool):
+        if not isinstance(val, bool):
+            raise TypeError("lock_x must be a bool")
+        self._x_lock = val
+
+    @property
+    def lock_y(self) -> bool:
+        return self._y_lock
+
+    @lock_y.setter
+    def lock_y(self, val: bool):
+        if not isinstance(val, bool):
+            raise TypeError("lock_y must be a bool")
+        self._y_lock = val
 
     @property
     def grab_range(self) -> Real:
@@ -94,13 +120,17 @@ class DraggableLine(AxesWidget):
             return
         x, y = self._handles.get_data()
         if self._handle_idx == 1:
-            x += event.xdata - x[1]
-            y += event.ydata - y[1]
+            if not self._x_lock:
+                x += event.xdata - x[1]
+            if not self._y_lock:
+                y += event.ydata - y[1]
         else:
-            x[self._handle_idx] = event.xdata
-            y[self._handle_idx] = event.ydata
-            x[1] = (x[0] + x[2]) / 2
-            y[1] = (y[0] + y[2]) / 2
+            if not self._x_lock:
+                x[self._handle_idx] = event.xdata
+                x[1] = (x[0] + x[2]) / 2
+            if not self._y_lock:
+                y[self._handle_idx] = event.ydata
+                y[1] = (y[0] + y[2]) / 2
         self._handles.set_data(x, y)
         self._observers.process("line-changed", (x[0], x[2]), (y[0], y[2]))
         if self.drawon:
@@ -158,3 +188,115 @@ class DraggableLine(AxesWidget):
         x, y : (2,) arraylike of float
         """
         self._handles.set_data(x, y)
+
+
+class DraggableVLine(DraggableLine):
+    def __init__(self, ax, x, grab_range=10, useblit=False, **kwargs) -> None:
+        """
+        A draggable line constrained to move horizontally.
+
+        Parameters
+        ----------
+        ax : Axes
+        x : float
+            The initial position of the line.
+        grab_range : Number, default: 10
+            Grab range for the handles in pixels (I think it's pixels)
+        useblit : bool, default False
+            Whether to use blitting for faster drawing (if supported by the
+            backend). See the tutorial :doc:`/tutorials/advanced/blitting`
+            for details.
+        **kwargs :
+            Passed on to Line2D for styling
+        """
+        super().__init__(
+            ax,
+            (x, x),
+            (0, 1),
+            grab_range=grab_range,
+            useblit=useblit,
+            transform=ax.get_xaxis_transform(),
+            **kwargs,
+        )
+        self._y_lock = True
+
+    def on_line_changed(self, func):
+        """
+        Connect *func* as a callback function whenever the line is moved.
+        *func* will receive the x position the line as a float
+
+        Parameters
+        ----------
+        func : callable
+            Function to call when a point is added.
+
+        Returns
+        -------
+        int
+            Connection id (which can be used to disconnect *func*).
+        """
+        return self._observers.connect("line-changed", lambda *args: func(args[0][0]))
+
+    @property
+    def lock_y(self) -> bool:
+        return self._y_lock
+
+    @lock_y.setter
+    def lock_y(self, val: bool):
+        raise ValueError("lock_y not settable on DraggableHLine")
+
+
+class DraggableHLine(DraggableLine):
+    def __init__(self, ax, y, grab_range=10, useblit=False, **kwargs) -> None:
+        """
+        A draggable line constrained to move vertically.
+
+        Parameters
+        ----------
+        ax : Axes
+        y : float
+            The initial position of the line.
+        grab_range : Number, default: 10
+            Grab range for the handles in pixels (I think it's pixels)
+        useblit : bool, default False
+            Whether to use blitting for faster drawing (if supported by the
+            backend). See the tutorial :doc:`/tutorials/advanced/blitting`
+            for details.
+        **kwargs :
+            Passed on to Line2D for styling
+        """
+        super().__init__(
+            ax,
+            (0, 1),
+            (y, y),
+            grab_range=grab_range,
+            useblit=useblit,
+            transform=ax.get_yaxis_transform(),
+            **kwargs,
+        )
+        self._x_lock = True
+
+    def on_line_changed(self, func):
+        """
+        Connect *func* as a callback function whenever the line is moved.
+        *func* will receive the y position the line as a float
+
+        Parameters
+        ----------
+        func : callable
+            Function to call when a point is added.
+
+        Returns
+        -------
+        int
+            Connection id (which can be used to disconnect *func*).
+        """
+        return self._observers.connect("line-changed", lambda *args: func(args[1][0]))
+
+    @property
+    def lock_x(self) -> bool:
+        return self._x_lock
+
+    @lock_x.setter
+    def lock_x(self, val: bool):
+        raise ValueError("lock_x not settable on DraggableHLine")
