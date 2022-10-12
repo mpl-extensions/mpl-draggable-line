@@ -23,8 +23,8 @@ class DraggableLine(AxesWidget):
         ax : Axes
         x, y : (2,) Array of float
             The initial positions of the handles.
-        grab_range : Number, default: 10
-            Grab range for the handles in pixels (I think it's pixels)
+        grab_range : float, default: .1
+            Grab range for the handles in Axes coordinates [0,1]
         useblit : bool, default False
             Whether to use blitting for faster drawing (if supported by the
             backend). See the tutorial :doc:`/tutorials/advanced/blitting`
@@ -92,7 +92,7 @@ class DraggableLine(AxesWidget):
     @property
     def grab_range(self) -> Real:
         """
-        Grab range in pixels (I think in pixels)
+        Grab range for the handles in Axes coordinates [0,1]
         """
         return self._grab_range
 
@@ -107,15 +107,14 @@ class DraggableLine(AxesWidget):
             return
         if not self.canvas.widgetlock.available(self):
             return
-        x, y = self._handles.get_data()
         # figure out if any handles are being grabbed
         # maybe possible to do this with a pick event?
 
         x, y = self._handles.get_data()
         # this is taken pretty much directly from the implementation
         # in matplotlib.widget.ToolHandles.closest
-        pts = self.ax.transData.transform(np.column_stack([x, y]))
-        diff = pts - [event.x, event.y]
+        pts = self.ax.transLimits.transform(np.column_stack([x, y]))
+        diff = pts - self.ax.transLimits.transform((event.xdata, event.ydata))
         dist = np.hypot(*diff.T)
         idx = np.argmin(dist)
         if dist[idx] < self._grab_range:
@@ -203,7 +202,7 @@ class DraggableLine(AxesWidget):
 
 
 class DraggableVLine(DraggableLine):
-    def __init__(self, ax, x, grab_range=10, useblit=False, **kwargs) -> None:
+    def __init__(self, ax, x, grab_range=0.1, useblit=False, **kwargs) -> None:
         """
         A draggable line constrained to move horizontally.
 
@@ -212,8 +211,8 @@ class DraggableVLine(DraggableLine):
         ax : Axes
         x : float
             The initial position of the line.
-        grab_range : Number, default: 10
-            Grab range for the handles in pixels (I think it's pixels)
+        grab_range : float, default: .1
+            Grab range for the handles in Axes coordinates [0,1]
         useblit : bool, default False
             Whether to use blitting for faster drawing (if supported by the
             backend). See the tutorial :doc:`/tutorials/advanced/blitting`
@@ -268,7 +267,7 @@ class DraggableVLine(DraggableLine):
 
 
 class DraggableHLine(DraggableLine):
-    def __init__(self, ax, y, grab_range=10, useblit=False, **kwargs) -> None:
+    def __init__(self, ax, y, grab_range=0.1, useblit=False, **kwargs) -> None:
         """
         A draggable line constrained to move vertically.
 
@@ -277,8 +276,8 @@ class DraggableHLine(DraggableLine):
         ax : Axes
         y : float
             The initial position of the line.
-        grab_range : Number, default: 10
-            Grab range for the handles in pixels (I think it's pixels)
+        grab_range : float, default: .1
+            Grab range for the handles in Axes coordinates [0,1]
         useblit : bool, default False
             Whether to use blitting for faster drawing (if supported by the
             backend). See the tutorial :doc:`/tutorials/advanced/blitting`
