@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import math
+import threading
 from numbers import Real
 
 import numpy as np
@@ -17,6 +19,9 @@ __all__ = [
 
 
 class DraggableLine(AxesWidget):
+    active_line, min_dist = None, math.inf
+    lock = threading.Lock()
+
     def __init__(
         self,
         ax,
@@ -132,7 +137,13 @@ class DraggableLine(AxesWidget):
         dist = np.hypot(*diff.T)
         idx = np.argmin(dist)
         if dist[idx] < self._grab_range:
-            self._handle_idx = idx
+            with DraggableLine.lock:
+                if dist[idx] < DraggableLine.min_dist:
+                    if DraggableLine.active_line is not None:
+                        DraggableLine.active_line._handle_idx = None
+                    self._handle_idx = idx
+                    DraggableLine.min_dist = dist[idx]
+                    DraggableLine.active_line = self
 
         else:
             self._handle_idx = None
@@ -163,6 +174,8 @@ class DraggableLine(AxesWidget):
 
     def _on_release(self, event: MouseEvent):
         self._handle_idx = None
+        with DraggableLine.lock:
+            DraggableLine.active_line, DraggableLine.min_dist = None, math.inf
 
     def on_line_changed(self, func):
         """
